@@ -15,6 +15,11 @@ import re
 
     February 11, 2014
     Sibelius Seraphini
+
+    composed = [['arrest', 'arson', 'assault', 'burglary', 'robbery',
+    'shooting', 'theft', 'vandalism', 'crime'],
+        ['ave','avenue', 'street', 'st', 'rd', 'road']]
+
 '''
 def match_regex(text, composed):
     text = text.lower() # Transform the text to lower case
