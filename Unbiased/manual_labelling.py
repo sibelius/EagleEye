@@ -39,5 +39,6 @@ if __name__ == '__main__':
             labels.append(int(ans == 'p'))
             already_labelled = already_labelled + 1
         elif ans == 's':
-            json.dump(labels, open(labels_filename, 'w'))
             break
+
+    json.dump(labels, open(labels_filename, 'w'))
