@@ -1,1 +1,1 @@
-["Unknown", "Robbery", "Shooting", "Theft", "Assault", "Burglary"]
+["Unknown", "Robbery", "Shooting", "Theft", "Assault", "Burglary", "Vandalism"]
