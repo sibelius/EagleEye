@@ -1,0 +1,14 @@
+arrest
+arrested
+arson
+assault
+burglary
+robbery
+shooting
+theft
+vandalism
+crime
+police
+perp
+carjacking
+stabbed
