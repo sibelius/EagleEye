@@ -1,1 +1,5 @@
+<<<<<<< HEAD
+["Unknown", "Robbery", "Shooting", "Theft", "Assault", "Burglary", "Vandalism", "Other", "DWI/DIP", "Arson", "Drug Posession"]
+=======
 ["Unknown", "Robbery", "Shooting", "Theft", "Assault", "Burglary", "Vandalism"]
+>>>>>>> c616b2cf378e1acd1b75f26669d17f0f4be01312
