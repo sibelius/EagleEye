@@ -1,25 +1,18 @@
 # -*- coding: utf-8 -*-
 '''
- This file provide common functions and classes for the collection of tweets task
+ This file provide common functions and classes
+ for the collection of tweets task
 
 @author:        "Sibelius Seraphini"
 @contact:       "sseraphini@albany.edu"
 @date:          Tue Apr 22 10:56:23 EDT 2014
 @version:       "1"
 '''
-import twitter
-
 # OAuth Settings
 CONSUMER_KEY = '9JKChCx3ePL2m2KLeL98HQ'
 CONSUMER_SECRET = 'rtMbPwidDXXUXEcqlfnb2QiBEeIllH2Hq30dq92Af58'
 ACCESS_TOKEN_KEY = '2313873457-9S4sFypeD6OVY5IAtx1e7R64h5Po0zFiWM3X0Xp'
 ACCESS_TOKEN_SECRET = 'HK5ZhGI2FMzjKs2mzx9Mgs6Tq4uYDgzFzI0gOsUevZagh'
-
-# Twitter Api to retrieve tweets
-MYAPI = twitter.Api(consumer_key=CONSUMER_KEY, \
-    consumer_secret=CONSUMER_SECRET, \
-    access_token_key=ACCESS_TOKEN_KEY, \
-    access_token_secret=ACCESS_TOKEN_SECRET)
 
 def get_value(string, key):
     ''' Return the value if the key exist or None otherwise '''
@@ -34,7 +27,7 @@ class Place:
     places = {} # Map place id to a place object
 
     def __init__(self,
-            id,
+            uid,
             street_address,
             city,
             region,
@@ -43,7 +36,7 @@ class Place:
             place_type,
             postal_code):
 
-        self.id = id
+        self.uid = uid
         self.street_address = street_address
         self.city = city
         self.region = region
@@ -52,15 +45,16 @@ class Place:
         self.place_type = place_type
         self.postal_code = postal_code
 
-        self.tweets = [] # List the tweets in this place
+        self.tweets = [] # List of tweets in this place
 
     @staticmethod
     def parse_json(string):
-        id = get_value(string, 'id')
+        ''' Create a Place object from a json '''
+        uid = get_value(string, 'id')
 
         # Save space for the same places
-        if id in Place.places:
-            return Place.places[id]
+        if uid in Place.places:
+            return Place.places[uid]
         else:
             if 'attributes' in string:
                 att = string['attributes']
@@ -81,7 +75,7 @@ class Place:
 
             # Create a new place
             place = Place(
-                id,
+                uid,
                 street_address,
                 city,
                 region,
@@ -91,7 +85,7 @@ class Place:
                 postal_code)
 
             # Save the new place in the list of all places
-            Place.places[id] = place
+            Place.places[uid] = place
 
             return place
 
@@ -100,14 +94,14 @@ class Tweet:
     def __init__(self,
         created_at,
         text,
-        id,
+        uid,
         retweeted,
         place,
         user):
 
         self.created_at = created_at
         self.text = text
-        self.id = id
+        self.uid = uid
         self.retweeted = retweeted
 
         self.place = place # Localization of this tweet
@@ -115,9 +109,10 @@ class Tweet:
 
     @staticmethod
     def parse_json(string):
+        ''' Create a Tweet object from a json '''
         created_at = get_value(string, 'created_at')
         text = get_value(string, 'text')
-        id = get_value(string, 'id')
+        uid = get_value(string, 'id')
         retweeted = get_value(string, 'retweeted')
 
         # Parse place
@@ -136,7 +131,7 @@ class Tweet:
         tweet = Tweet(
             created_at,
             text,
-            id,
+            uid,
             retweeted,
             place,
             user)
@@ -161,7 +156,7 @@ class TwitterUser:
             profile_image_url,
             description,
             followers_count,
-            id,
+            uid,
             geo_enabled,
             location,
             name,
@@ -172,21 +167,22 @@ class TwitterUser:
         self.profile_image_url = profile_image_url
         self.description = description
         self.followers_count = followers_count
-        self.id = id
+        self.uid = uid
         self.geo_enabled = geo_enabled
         self.location = location
         self.name = name
         self.screen_name = screen_name
-        self.statuses_count =statuses_count
+        self.statuses_count = statuses_count
 
         self.tweets = [] # List of tweets of this user
 
     @staticmethod
     def parse_json(string):
-        id = get_value(string, 'id')
+        ''' create a TwitterUser from a json '''
+        uid = get_value(string, 'id')
 
-        if id in TwitterUser.twitterusers:
-            return TwitterUser.twitterusers[id]
+        if uid in TwitterUser.twitterusers:
+            return TwitterUser.twitterusers[uid]
         else:
             created_at = get_value(string, 'created_at')
             profile_image_url = get_value(string, 'profile_image_url')
@@ -204,7 +200,7 @@ class TwitterUser:
                 profile_image_url,
                 description,
                 followers_count,
-                id,
+                uid,
                 geo_enabled,
                 location,
                 name,
@@ -212,14 +208,14 @@ class TwitterUser:
                 statuses_count)
 
             # Save in the list of all twitter users
-            TwitterUser.twitterusers[id] = twitter_user
+            TwitterUser.twitterusers[uid] = twitter_user
 
             return twitter_user
 
 class Crime:
     ''' This class represents a crime related to one or more tweets '''
-    def __init__(self, id, crimetype):
-        self.id = id
+    def __init__(self, uid, crimetype):
+        self.uid = uid
         self.tweets = [] # List of tweets that represent this crime
         self.crimetype = crimetype
 
