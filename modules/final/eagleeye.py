@@ -39,8 +39,10 @@ class EagleEye(tweepy.StreamListener):
         self.filename_alias_bigram = self.resource_dir + 'alias_bigram.txt'
         self.filename_roads = self.resource_dir + 'roads.txt'
 
-        # Count number of tweets collected
-        self.count = 0
+        # Count all tweets
+        self.count_all = 0
+        self.count_crime_related = 0
+        self.count_with_location = 0
 
         # Create the data folder
         if not os.path.exists(self.output_dir):
@@ -80,6 +82,8 @@ class EagleEye(tweepy.StreamListener):
             # Remove punctuation
             text = self.remove_punctuation(text)
 
+            self.count_all = self.count_all + 1
+
             # Check whether the tweet is a crime related tweet
             if self.clf_crime.predict([text]) == 1:
                 # Define the type of crime of this tweet
@@ -90,14 +94,25 @@ class EagleEye(tweepy.StreamListener):
 
                 self.save_tweet(tweet, self.output_crime_related)
 
-                # Extract the location of the tweet
+                self.count_crime_related = self.count_crime_related + 1
 
                 # Apply the alias dictionary to the text
                 text_alias = apply_alias(text)
 
-            self.count = self.count + 1
+                # Extract the location of the tweet
+                street_address = self.extract_street(text)
 
-            print(self.count)
+                if street_address != "":
+                    self.count_with_location = self.count_with_location + 1
+
+                    tweet['street_address'] = street_address
+
+                    self.save_tweet(tweet, self.output_with_location)
+
+            #print("All\tCrimeRelated\tLocation")
+            if self.count_all % 100 == 0:
+                print("%d\t%d\t\t%d" %
+                    (self.count_all, self.count_crime_related, self.count_with_location))
 
         except:
             print 'Data writting exception.'
@@ -157,9 +172,20 @@ class EagleEye(tweepy.StreamListener):
 
         return regex.sub('', text)
 
+    def extract_street(self, text):
+        # Transform text to unicode
+        text = text.encode('utf-8')
+
+        address = []
+        for road in self.roads:
+            if ' ' + road + ' ' in text:
+                address.append(road)
+
+        # could be one or more street names
+        return " ".join(address)
+
 def main():
     ''' This is the main part of our application '''
-    print('Test')
     while True:
         try:
             eagle_eye = EagleEye()
@@ -167,7 +193,6 @@ def main():
             stream.filter(locations=[-74, 40, -73, 41]) # New York City
         except:
             print 'Exception occur!'
-    print('Test1')
 
 if __name__ == '__main__':
     main()
