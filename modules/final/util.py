@@ -13,6 +13,9 @@ from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.feature_extraction.text import TfidfTransformer
 from sklearn.svm import LinearSVC
 import nltk.stem
+import re, string   # remove punctuation
+import json
+
 
 CONSUMER_KEY = '9JKChCx3ePL2m2KLeL98HQ'
 CONSUMER_SECRET = 'rtMbPwidDXXUXEcqlfnb2QiBEeIllH2Hq30dq92Af58'
@@ -28,3 +31,37 @@ class StemmedCountVectorizer(CountVectorizer):
 
         return lambda doc: (self.english_stemmer.stem(w) for w in analyzer(doc))
 
+
+def loadkeywords(filename):
+    ''' Load a list of keywords from a file '''
+    # Remove the \n of each line
+    keywords = [line.rstrip() for line in open(filename, 'r')]
+
+    return keywords
+
+def build_query(keywords):
+    ''' Build a OR query using the keywords list '''
+    query = ' OR '.join(keywords)
+    return query
+
+def save_tweet(tweet, filename):
+    ''' save one tweet for a file '''
+    with open(filename, 'a') as output:
+        output.write(json.dumps(tweet) + '\n')
+
+def load_dict(filename):
+    ''' Load a python dictionary from a file '''
+    temp = {}
+
+    with open(filename,'r') as f:
+        for line in f:
+            (key , val) = line.lower().rstrip('\n').split(',')
+            temp[key] = val
+
+    return temp
+
+def remove_punctuation(text):
+    ''' Remove punctuation symbols from a text '''
+    regex = re.compile('[%s]' % re.escape(string.punctuation))
+
+    return regex.sub('', text)

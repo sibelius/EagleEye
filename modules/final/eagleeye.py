@@ -14,16 +14,13 @@ import json         # python json module
 import os           # python os module, used for creating folders
 import pickle       # load the trained classifiers
 import numpy as np
-import re, string   # remove punctuation
 
 OAuth = tweepy.OAuthHandler(util.CONSUMER_KEY, util.CONSUMER_SECRET)
 OAuth.set_access_token(util.ACCESS_TOKEN_KEY, util.ACCESS_TOKEN_SECRET)
 
-class EagleEye(tweepy.StreamListener):
-    ''' This is the main class of our application '''
+class EagleEye:
+    ''' This class process the tweets '''
     def __init__(self):
-        super(EagleEye, self).__init__()
-
         # Folders and files to save the collected tweets
         self.output_dir = 'data/'
         self.output_all_tweets = self.output_dir + 'all_tweets.json'
@@ -33,11 +30,14 @@ class EagleEye(tweepy.StreamListener):
         # Files that contain the trained classifiers
         self.resource_dir = 'resource/'
         self.filename_classifier = self.resource_dir +  'CrimeClassifier.pickle'
-        self.filename_typeclassifier = self.resource_dir + 'TypeCrimeClassifier.pickle'
-        self.filename_labels_description = self.resource_dir + 'labels_description.txt'
+        self.filename_typeclassifier = \
+            self.resource_dir + 'TypeCrimeClassifier.pickle'
+        self.filename_labels_description = \
+            self.resource_dir + 'labels_description.txt'
         self.filename_alias_st = self.resource_dir + 'alias.txt'
         self.filename_alias_bigram = self.resource_dir + 'alias_bigram.txt'
         self.filename_roads = self.resource_dir + 'roads.txt'
+        self.filename_states = self.resource_dir + 'states_acronym.txt'
 
         # Count all tweets
         self.count_all = 0
@@ -68,83 +68,76 @@ class EagleEye(tweepy.StreamListener):
         # Load road names
         self.load_roads()
 
-    def on_data(self, raw_data):
-        ''' Handle the tweet data '''
-        try:
-            tweet = json.loads(str(raw_data))
+        # List of all states acronym in USA
+        self.states = None
 
-            # Save all tweet collected
-            self.save_tweet(tweet, self.output_all_tweets)
+        self.load_states()
 
-            # Transform the tweet's text in lowercase
-            text = tweet['text'].lower()
+    def process_tweet(self, tweet):
+        ''' Process one tweet '''
+        # Save all tweet collected
+        util.save_tweet(tweet, self.output_all_tweets)
 
-            # Remove punctuation
-            text = self.remove_punctuation(text)
+        # Transform the tweet's text in lowercase
+        text = tweet['text'].lower()
 
-            self.count_all = self.count_all + 1
+        # Remove punctuation
+        text = util.remove_punctuation(text)
 
-            # Check whether the tweet is a crime related tweet
-            if self.clf_crime.predict([text]) == 1:
-                # Define the type of crime of this tweet
-                type_crime = self.description[self.clf_typecrime([text])]
+        self.count_all = self.count_all + 1
 
-                # Save the tweets related to crime with theirs respective types
-                tweet['type_crime'] = type_crime
+        # Check whether the tweet is a crime related tweet
+        if self.clf_crime.predict([text]) == 1:
+            # Define the type of crime of this tweet
+            type_crime = self.description[self.clf_typecrime.predict([text])]
 
-                self.save_tweet(tweet, self.output_crime_related)
+            # Save the tweets related to crime with theirs respective types
+            tweet['type_crime'] = type_crime
 
-                self.count_crime_related = self.count_crime_related + 1
+            util.save_tweet(tweet, self.output_crime_related)
 
-                # Apply the alias dictionary to the text
-                text_alias = apply_alias(text)
+            self.count_crime_related = self.count_crime_related + 1
 
-                # Extract the location of the tweet
-                street_address = self.extract_street(text)
+            # Apply the alias dictionary to the text
+            text = self.apply_alias(text)
 
-                if street_address != "":
-                    self.count_with_location = self.count_with_location + 1
+            # Extract the location of the tweet
+            street_address = self.extract_street(text)
 
-                    tweet['street_address'] = street_address
+            if street_address != "":
+                self.count_with_location = self.count_with_location + 1
 
-                    self.save_tweet(tweet, self.output_with_location)
+                tweet['street_address'] = street_address
 
-            #print("All\tCrimeRelated\tLocation")
-            if self.count_all % 100 == 0:
-                print("%d\t%d\t\t%d" %
-                    (self.count_all, self.count_crime_related, self.count_with_location))
+                # Extract the state information
+                tweet['state'] = self.extract_state(text)
 
-        except:
-            print 'Data writting exception.'
+                util.save_tweet(tweet, self.output_with_location)
 
-    def save_tweet(self, tweet, filename):
-        ''' save one tweet for a file '''
-        with open(filename, 'a') as output:
-            output.write(json.dumps(tweet) + '\n')
-
-    def load_dict(self, filename):
-        temp = {}
-
-        with open(filename,'r') as f:
-            for line in f:
-                (key,val) = line.lower().rstrip('\n').split(',')
-                temp[key] = val
-
-        return temp
+        #print("All\tCrimeRelated\tLocation")
+        if self.count_all % 20 == 0:
+            print("%d\t%d\t\t%d" % \
+                    (self.count_all, self.count_crime_related, \
+                    self.count_with_location))
 
     def load_alias(self):
         ''' load an alias dict '''
 
-        self.alias_st = self.load_dict(self.filename_alias_st)
-        self.alias_bigram = self.load_dict(self.filename_alias_bigram)
+        self.alias_st = util.load_dict(self.filename_alias_st)
+        self.alias_bigram = util.load_dict(self.filename_alias_bigram)
 
     def load_roads(self):
         ''' load a list of roads of us '''
-        with open(self.filename_roads,'r') as f:
-            self.roads = f.read().lower().splitlines()
+        with open(self.filename_roads,'r') as f_roads:
+            self.roads = f_roads.read().lower().splitlines()
 
         # Remove non-unique roads
         self.roads = np.array(list(set(self.roads)))
+
+    def load_states(self):
+        ''' load a list of all states of us '''
+        self.states = open(self.filename_states, \
+                'r').read().lower().splitlines()
 
     def apply_alias(self, text):
         ''' apply the alias dict to a text '''
@@ -162,17 +155,14 @@ class EagleEye(tweepy.StreamListener):
         return ' '.join(temp)
 
     def apply_alias_bigram(self, text):
+        ''' apply an alias based on bigrams '''
         for key in self.alias_bigram.keys():
             text = text.replace(key, self.alias_bigram[key])
 
         return text
 
-    def remove_punctuation(self, text):
-        regex = re.compile('[%s]' % re.escape(string.punctuation))
-
-        return regex.sub('', text)
-
     def extract_street(self, text):
+        ''' extract a street information from a text '''
         # Transform text to unicode
         text = text.encode('utf-8')
 
@@ -182,15 +172,48 @@ class EagleEye(tweepy.StreamListener):
                 address.append(road)
 
         # could be one or more street names
-        return " ".join(address)
+        return ' '.join(address)
+
+    def extract_state(self, text):
+        ''' extract state information from a text '''
+        text = text.encode('utf-8')
+
+        for state in self.states:
+            if ' ' + state + ' ' in text:
+                return state
+
+        return ''
+
+class StreamListener(tweepy.StreamListener):
+    ''' This class listen to new tweets '''
+    def __init__(self):
+        super(StreamListener, self).__init__()
+
+        # The eagleEye class process the tweets
+        self.eagle_eye = EagleEye()
+
+    def on_data(self, raw_data):
+        ''' Handle the tweet data '''
+        try:
+            tweet = json.loads(str(raw_data))
+            self.eagle_eye.process_tweet(tweet)
+
+        except:
+            print 'Data writting exception.'
 
 def main():
+    ''' This is our main function '''
+    filename_keywords = 'resource/listofkeywords.txt'
+    keywords = util.loadkeywords(filename_keywords)
+
     ''' This is the main part of our application '''
     while True:
         try:
-            eagle_eye = EagleEye()
-            stream = tweepy.Stream(OAuth, eagle_eye)
-            stream.filter(locations=[-74, 40, -73, 41]) # New York City
+            stream_listener = StreamListener()
+            stream = tweepy.Stream(OAuth, stream_listener)
+            # Receive tweets from New York city and related to crimes
+            stream.filter(locations=[-74, 40, -73, 41], \
+                    track = keywords)
         except:
             print 'Exception occur!'
 
