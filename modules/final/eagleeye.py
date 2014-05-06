@@ -101,8 +101,11 @@ class EagleEye:
             # Apply the alias dictionary to the text
             text = self.apply_alias(text)
 
+            # Extract full address
+            street_address = self.extract_full_address(text)
+
             # Extract the location of the tweet
-            street_address = self.extract_street(text)
+#            street_address = self.extract_street(text)
 
             if street_address != "":
                 self.count_with_location = self.count_with_location + 1
@@ -110,7 +113,7 @@ class EagleEye:
                 tweet['street_address'] = street_address
 
                 # Extract the state information
-                tweet['state'] = self.extract_state(text)
+#                tweet['state'] = self.extract_state(text)
 
                 util.save_tweet(tweet, self.output_with_location)
 
@@ -183,6 +186,38 @@ class EagleEye:
                 return state
 
         return ''
+
+    def extract_full_address(self, text):
+        text = text.encode('utf-8')
+
+        address = []
+        for road in self.roads:
+            if ' ' + road + ' ' in text:
+                address.append(road)
+
+        if len(address) == 0:
+            return ''
+
+        current_state = None
+        for state in self.states:
+            if ' ' + state + ' ' in text:
+                current_state = state
+                break
+
+        begin_address = len(text)+1
+        for addr in address:
+            if text.find(addr) < begin_address:
+                begin_address = text.find(addr)
+
+        if current_state != None:
+            end_address = text.find(current_state) + 2
+        else:
+            end_address = 0
+            for addr in address:
+                if text.find(addr)+len(addr) > end_address:
+                    end_address = text.find(addr)+len(addr)
+
+        return text[begin_address:end_address]
 
 class StreamListener(tweepy.StreamListener):
     ''' This class listen to new tweets '''
